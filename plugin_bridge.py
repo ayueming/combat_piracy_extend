@@ -7,6 +7,7 @@ import os
 import shutil
 import psutil
 import socket
+import sys  # ★ 新增：用于判断打包环境
 
 try:
     import winreg
@@ -116,7 +117,7 @@ def _get_extension_profile_dir(user_id, exe_path):
     return d
 
 
-# ★ 核心新增：暴力强杀所有使用该 profile 目录的浏览器进程
+# ★ 核心：暴力强杀所有使用该 profile 目录的浏览器进程
 def _force_kill_browser_by_profile(profile_dir):
     """无视 _browser_proc 变量，直接物理超度所有残留的旧浏览器进程"""
     if not profile_dir or not os.path.exists(profile_dir):
@@ -151,8 +152,33 @@ def _cleanup_lock_files(profile_dir):
             pass
 
 
+# =====================================================================
+# ★ 新增：智能查找插件路径（解决打包后找不到插件的问题）
+# =====================================================================
+def _get_plugin_dir():
+    """兼容开发环境、PyInstaller打包(_internal)和Inno Setup安装(同级目录)"""
+    if getattr(sys, 'frozen', False):
+        # 1. 优先找 exe 同级目录 (对应 Inno Setup 单独复制插件)
+        d = os.path.join(os.path.dirname(sys.executable), "my_extension")
+        if os.path.exists(d) and os.path.exists(os.path.join(d, "manifest.json")):
+            return d
+        # 2. 如果没找到，去 PyInstaller 打包的内部目录里找 (对应 .spec 打包)
+        if hasattr(sys, '_MEIPASS'):
+            d = os.path.join(sys._MEIPASS, "my_extension")
+            if os.path.exists(d) and os.path.exists(os.path.join(d, "manifest.json")):
+                return d
+    else:
+        # 开发环境
+        d = os.path.join(os.path.dirname(os.path.abspath(__file__)), "my_extension")
+        if os.path.exists(d):
+            return d
+    return ""
+
+
 def _get_wakeup_url():
-    plugin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "my_extension")
+    plugin_dir = _get_plugin_dir()
+    if not plugin_dir:
+        return ""
     wakeup_file = os.path.join(plugin_dir, "wakeup.html")
     return f"file:///{wakeup_file.replace(os.sep, '/')}"
 
@@ -169,11 +195,17 @@ def _build_browser_cmd(exe, wakeup_url, profile_dir):
     ]
 
     if EXTENSION_DEV_MODE:
-        plugin_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "my_extension")
-        cmd.append(f"--load-extension={plugin_dir}")
-        cmd.append(f"--disable-extensions-except={plugin_dir}")
+        # ★ 改成调用智能路径查找
+        plugin_dir = _get_plugin_dir()
+        if plugin_dir:
+            cmd.append(f"--load-extension={plugin_dir}")
+            cmd.append(f"--disable-extensions-except={plugin_dir}")
+            print(f"[Bridge] 插件加载路径: {plugin_dir}")
+        else:
+            print("[Bridge] ⚠️ 严重警告：找不到 my_extension 插件目录！")
 
-    cmd.append(wakeup_url)
+    if wakeup_url:
+        cmd.append(wakeup_url)
     return cmd
 
 
@@ -254,7 +286,7 @@ def ensure_ready(business_name="业务", timeout=8.0):
             # 2. 检测当前进程是否开启了 9222 端口
             if not need_launch:
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                s.settimeout(0.1)
+                s.settimeout(1.0)  # 给网络栈一点喘息时间，防误杀
                 if s.connect_ex(("127.0.0.1", 9222)) != 0:
                     print("[Bridge] 检测到现存浏览器未开启调试端口，准备重启以支持 CDP...")
                     _browser_proc = None

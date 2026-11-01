@@ -41,6 +41,7 @@ a = Analysis(
     datas=[
         # ★ 核心资源文件
         ('*.md', '.'),                           # 所有md文档
+        ('*.js', '.'),                           # 所有js文档
 
         # ★ 库自带的静态资源
         *collect_data_files('playwright'),

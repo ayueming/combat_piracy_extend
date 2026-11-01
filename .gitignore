@@ -1,0 +1,31 @@
+# --- 自定义忽略 ---
+
+/build/
+/data/
+/dist/
+/handlers/
+/installer_output/
+/temp_browser_profile/
+/0_NOTE_LOCAL.txt
+/build.spec
+/changeplan.txt
+/chrome-win64.zip
+/combat_piracy_setup.iss
+/combat_piracy_share.docx
+/config_local.py
+/test.py
+/启动软件.bat
+
+
+# --- Python 编译缓存 ---
+__pycache__/
+*.py[cod]
+*$py.class
+
+# --- 虚拟环境 ---
+.venv/
+venv/
+
+# --- IDE 配置 ---
+.idea/
+.vscode/

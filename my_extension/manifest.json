@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "维权助手抓取器",
+  "version": "1.0",
+  "description": "抓取网页链接并发送给本地Python",
+  "permissions": [
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8080/*",
+    "ws://127.0.0.1:8080/*",
+    "*://*.baidu.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["wakeup.html"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

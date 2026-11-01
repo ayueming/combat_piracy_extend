@@ -25,7 +25,7 @@ from page_profile import ProfilePage
 from login_window import LoginWindow
 from login_auto import try_auto_login, clear_session
 
-VERSION = "2.0.0"
+VERSION = "2.2.1"
 
 class MainApp(QMainWindow):
     def __init__(self):
